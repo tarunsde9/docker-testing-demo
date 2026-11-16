@@ -31,7 +31,7 @@ jobs:
             -t ${{ secrets.DOCKERHUB_USERNAME }}/docker-testing-demo:${{ github.sha }} .
 
       - name: Scan Docker image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/docker-testing-demo:${{ github.sha }}
           format: table
