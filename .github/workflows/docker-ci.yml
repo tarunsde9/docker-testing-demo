@@ -1,0 +1,51 @@
+name: Docker CI Pipeline
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-test-scan-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Run tests and build JAR
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B clean package
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/docker-testing-demo:1.0.0 \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/docker-testing-demo:${{ github.sha }} .
+
+      - name: Scan Docker image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/docker-testing-demo:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Docker images
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/docker-testing-demo:1.0.0
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/docker-testing-demo:${{ github.sha }}
